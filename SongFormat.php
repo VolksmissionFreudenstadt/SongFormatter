@@ -30,6 +30,12 @@ define('CCLI_STRING', 'CCLI-Liednummer');
 // the formats 'PJ-nnn' or 'n - ' prefixed to a song title.
 define('VMFDS_FORMATTING', TRUE);
 
+// Define whether to convert the original .sng file to utf8. Note that
+// .sng files from a Windows platform will probably need to be converted,
+// and failure to do so will result in strange characters in the
+// song titles in OpenLP
+define('UTF8_ENCODE', TRUE);
+
 
 // -- nothing to configure below this line
 ///////////////////////////////////////////////////////////////////////
@@ -54,9 +60,7 @@ class SBSong {
 	 * Create a new instance of the SBSong class
 	 * 
 	 * The constructor will immediately import the base file, do some title
-	 * formatting and CCLI number extraction. It also does utf8 conversion,
-	 * always assuming that the source file is not encoded in utf8 
-	 * (which is probably not the case on a Windows platform).
+	 * formatting and CCLI number extraction. It also does utf8 conversion.
 	 * 
 	 * @param string The .sng file name
 	 * @returns void
@@ -73,7 +77,8 @@ class SBSong {
 	 */
 	protected function import($filename) {
 		$this->filename=$filename;
-		$raw = utf8_encode(file_get_contents($filename));
+		$raw = file_get_contents($filename);
+		if (UTF8_ENCODE) $raw=utf8_encode($raw);
 		
 		$this->identifyDivider($raw);
 		$this->parts=explode('---'.$this->divider, $raw);
