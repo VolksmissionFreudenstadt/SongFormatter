@@ -2,6 +2,12 @@
 <?php
 
 //// Configuration
+
+
+// Define the tags assigned to each language in a song.
+// The curly brackets {} will be added automatically, so 'sp1' 
+// will become {sp1}. If you assign an empty string '', no tags
+// will be added to the corresponding language lines.
 $languageColors=array(
 	1=> '',
 	2=> 'sp2',
@@ -12,7 +18,18 @@ $languageColors=array(
 	7=> 'sp7',
 	8=> 'sp8',
 	9=> 'sp9',
-);
+); 
+
+// Define the string to look for when extracting CCLI license no 
+// information from the text. This is language-dependend. The default
+// string used here is the one from the German SongSelect site:
+define('CCLI_STRING', 'CCLI-Liednummer');
+
+// Define whether to do the title processing specific to Volksmission
+// Freudenstadt. Specifically, this will eliminate any song numbers in 
+// the formats 'PJ-nnn' or 'n - ' prefixed to a song title.
+define('VMFDS_FORMATTING', TRUE);
+
 
 // -- nothing to configure below this line
 ///////////////////////////////////////////////////////////////////////
@@ -76,6 +93,9 @@ class SBSong {
 	 * the end of the text. This method will look for this line and 
 	 * extract its contents into the correct data field.
 	 * 
+	 * Songs without a CCLI license number will be listed in a file
+	 * called unlicensed.txt in the current folder.
+	 * 
 	 * @param string Raw .sng file contents
 	 * @returns void
 	 */
@@ -83,11 +103,12 @@ class SBSong {
 		if (!$this->songConfig['CCLI']) {
 			$lines = explode($this->divider, $raw);
 			foreach ($lines as $key => $line) {
-				if (substr($line, 0, 15)=='CCLI-Liednummer') {
-					$this->songConfig['CCLI'] = str_replace('CCLI-Liednummer ', '', $line);
+				if (substr($line, 0, strlen(CCLI_STRING))==CCLI_STRING) {
+					$this->songConfig['CCLI'] = str_replace(CCLI_STRING.' ', '', $line);
 				}
 			}
 		}
+		// write a list of all songs without license no.
 		if (!$this->songConfig['CCLI']) {
 			$fp = fopen('unlicensed.txt', 'a');
 			fwrite($fp, $this->filename.CRLF);
@@ -102,12 +123,14 @@ class SBSong {
 	 * @returns string Song title without the number parts
 	 */
 	protected function removeTitleParts($t) {
-		// get rid of PJ-...
-		if (substr($t, 0, 2)=='PJ') $t = substr($t, 9);
-		// get rid of initial song numbers
-		$tmp = explode(' - ', $t);
-		if (count($tmp)) {
-			if (is_numeric($tmp[0])) $t = str_replace($tmp[0].' - ', '', $t);
+		if (VMFDS_FORMATTING) {
+			// get rid of PJ-...
+			if (substr($t, 0, 2)=='PJ') $t = substr($t, 9);
+			// get rid of initial song numbers
+			$tmp = explode(' - ', $t);
+			if (count($tmp)) {
+				if (is_numeric($tmp[0])) $t = str_replace($tmp[0].' - ', '', $t);
+			}
 		}
 		return $t;
 	}
