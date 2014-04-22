@@ -14,12 +14,18 @@ $languageColors=array(
 	9=> 'sp9',
 );
 
+// -- nothing to configure below this line
 ///////////////////////////////////////////////////////////////////////
 error_reporting(E_ERROR);
 define('VERSION', strftime('%Y%m%d.%H.%M', getlastmod()));
 define('CRLF', "\r\n");
-///////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 
+/**
+ * Songbeamer .sng song
+ * 
+ * @author Christoph Fischer <christoph.fischer@volksmission.de>
+ */
 class SBSong {
 	protected $filename;
 	public $title;
@@ -27,10 +33,27 @@ class SBSong {
 	protected $parts;
 	protected $divider="\n";
 
+	/**
+	 * Create a new instance of the SBSong class
+	 * 
+	 * The constructor will immediately import the base file, do some title
+	 * formatting and CCLI number extraction. It also does utf8 conversion,
+	 * always assuming that the source file is not encoded in utf8 
+	 * (which is probably not the case on a Windows platform).
+	 * 
+	 * @param string The .sng file name
+	 * @returns void
+	 */
 	public function __construct ($filename) {
 		$this->import($filename);
 	}
 	
+	/**
+	 * Import a song from a .sng file
+	 * 
+	 * @param string .sng file name
+	 * @returns void
+	 */
 	protected function import($filename) {
 		$this->filename=$filename;
 		$raw = utf8_encode(file_get_contents($filename));
@@ -45,6 +68,17 @@ class SBSong {
 		$this->getLicense($raw);
 	}
 	
+	/**
+	 * Extract license information
+	 * 
+	 * Some songs simply copied from www.songselect.com have an empty 
+	 * CCLI number field, but have a line containing the CCLI number at
+	 * the end of the text. This method will look for this line and 
+	 * extract its contents into the correct data field.
+	 * 
+	 * @param string Raw .sng file contents
+	 * @returns void
+	 */
 	protected function getLicense($raw) {
 		if (!$this->songConfig['CCLI']) {
 			$lines = explode($this->divider, $raw);
@@ -61,6 +95,12 @@ class SBSong {
 		}
 	}
 	
+	/**
+	 * Remove PJ-nnn and initial song numbers from the title
+	 * 
+	 * @param string Song title
+	 * @returns string Song title without the number parts
+	 */
 	protected function removeTitleParts($t) {
 		// get rid of PJ-...
 		if (substr($t, 0, 2)=='PJ') $t = substr($t, 9);
@@ -72,6 +112,14 @@ class SBSong {
 		return $t;
 	}
 	
+	/**
+	 * Format the song title
+	 * 
+	 * If no song title is present, the file name is used as title
+	 * 
+	 * @params void
+	 * @returns void
+	 */
 	protected function formatTitle() {
 		$t = $this->removeTitleParts($this->songConfig['Title']);
 
@@ -88,11 +136,30 @@ class SBSong {
 		$this->title = $t;
 	}
 
+	/**
+	 * Identify the line break character
+	 * 
+	 * This function checks whether \r\n (Windows standard) or \n
+	 * (Unix standard) was used as the line break control character
+	 * in the source file.
+	 * 
+	 * @param string Raw .sng file text
+	 * @returns void
+	 */
 	protected function identifyDivider($raw) {
 		$lines=explode("\n", $raw);
 		if (substr($lines[0], -1) == "\r") $this->divider="\r\n";
 	}
 	
+	/**
+	 * Import configuration from .sng file
+	 * 
+	 * This method imports the configuration from the .sng file's
+	 * header into an array.
+	 * 
+	 * @param string Raw text of the .sng file header
+	 * @returns void
+	 */
 	protected function importConfig($rawPart) {
 		$lines = explode($this->divider, $rawPart);
 		foreach ($lines as $line) {
@@ -105,6 +172,12 @@ class SBSong {
 	}
 		
 		
+	/**
+	 * Tag the different languages in a song
+	 * 
+	 * @param array languageColors array assigning a tag to each language number
+	 * @returns void
+	 */
 	public function processLanguages($colors) {
 		if ($this->songConfig['LangCount']>1) {
 			foreach ($this->parts as $pk => $part) {
@@ -136,6 +209,15 @@ class SBSong {
 		}
 	}
 	
+	/**
+	 * Checks whether a line should be skipped
+	 * 
+	 * Lines containing song-part keywords like verse, refrain, ...
+	 * should be skipped and not counted as a new language line
+	 * 
+	 * @param string Line from a song
+	 * @returns bool True when the line should be skipped
+	 */
 	protected function skipLine($line) {
 		$line = explode(' ', $line);
 		$keyWord=$line[0];
@@ -146,6 +228,12 @@ class SBSong {
 		return $f;
 	}
 	
+	/**
+	 * Write the song back to a .sng file
+	 * 
+	 * @param void
+	 * @returns void
+	 */
 	public function write() {
 		// create config block
 		foreach ($this->songConfig as $key=> $value) {
